@@ -5,16 +5,36 @@ Visualise la performance du moteur de rapprochement automatique.
 Lancer avec : streamlit run app.py
 """
 
+import os
 import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
+import generate_data
+import matching
+
 st.set_page_config(page_title="Cash Reconciliation - Assurance", page_icon="💰", layout="wide")
+
+
+@st.cache_resource
+def ensure_data_exists():
+    """
+    Sur Streamlit Cloud, seuls les fichiers .py versionnés sur GitHub sont garantis
+    présents — les CSV générés ne le sont pas forcément (taille, .gitignore, oubli).
+    On régénère donc les données + le matching au premier lancement si besoin.
+    Mis en cache pour ne le faire qu'une fois par session serveur.
+    """
+    if not os.path.exists("releve_bancaire_matche.csv"):
+        with st.spinner("Première initialisation : génération des données simulées..."):
+            generate_data.main()
+            matching.main()
+    return True
 
 
 @st.cache_data
 def load_data():
+    ensure_data_exists()
     virements = pd.read_csv("releve_bancaire_matche.csv", parse_dates=["date_virement"])
     contrats = pd.read_csv("contrats.csv", dtype={"police_id": str})
     return virements, contrats
